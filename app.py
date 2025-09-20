@@ -211,14 +211,14 @@ def extract_video_url(page_url: str) -> str | None:
 
 # --- NEW: Function to pre-load caches on startup ---
 def preload_caches():
-    """Fetches and caches the first two pages of recent movies for all languages."""
+    """Fetches and caches the first two pages of popular movies for all languages."""
     print("--- Pre-loading initial movie data into cache ---")
     # Give the server a moment to start before we fire off requests
     time.sleep(2)
     for lang_name, lang_code in LANGUAGE_CODES.items():
         for page in [1, 2]:
-            url = f"https://einthusan.tv/movie/results/?find=Recent&lang={lang_code}&page={page}"
-            print(f"Caching recent movies for '{lang_name}' (page {page})...")
+            url = f"https://einthusan.tv/movie/results/?find=Popularity&lang={lang_code}&ptype=view&tp=alltime&page={page}"
+            print(f"Caching popular movies for '{lang_name}' (page {page})...")
             try:
                 # This call will populate the cache due to the @cached decorator
                 fetch_movies_by_url(url)
