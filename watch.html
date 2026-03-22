@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Thirai · YouTube</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+<style>
+/* ═══════════════════════════════════════════════
+   GLOBAL RESET — no scrolling ever
+═══════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box; outline: none;
+  -webkit-tap-highlight-color: transparent;
+  margin: 0; padding: 0;
+}
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; background: none; }
+input, select { font-family: 'Inter', sans-serif; color: #fff; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════
+   VIEW TOGGLE
+═══════════════════════════════════════════════ */
+/* Search view scrolls its own content within 100vh */
+#viewSearch {
+  position: fixed; inset: 0;
+  background: #080808;
+  display: flex; flex-direction: column;
+  overflow-y: auto; overflow-x: hidden;
+}
+/* Player fills the screen completely, no scroll */
+#viewPlayer {
+  position: fixed; inset: 0;
+  background: #000;
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════
+   SEARCH VIEW
+═══════════════════════════════════════════════ */
+.s-header {
+  position: sticky; top: 0; z-index: 50;
+  height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 14px;
+  background: rgba(8,8,8,0.97); backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.logo {
+  font-size: 1.3rem; font-weight: 900; letter-spacing: -0.04em; flex-shrink: 0; cursor: pointer;
+}
+.logo em { color: #e50914; font-style: normal; }
+.s-row { flex: 1; display: flex; gap: 8px; }
+.s-input {
+  flex: 1; min-width: 0;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 9px 13px; color: #fff; font-size: 0.9rem;
+  transition: border-color 150ms, background 150ms;
+}
+.s-input:focus { border-color: rgba(255,255,255,0.22); background: rgba(255,255,255,0.09); outline: none; }
+.s-input::placeholder { color: rgba(255,255,255,0.28); }
+.s-input:-webkit-autofill, .s-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #1c1c1c inset !important;
+  -webkit-text-fill-color: #fff !important;
+}
+.s-btn {
+  flex-shrink: 0; background: #e50914; color: #fff;
+  border-radius: 10px; padding: 9px 15px; font-size: 1rem;
+  transition: background 120ms, transform 80ms;
+}
+.s-btn:active { background: #c20811; transform: scale(0.96); }
+
+.url-box { display: flex; gap: 8px; padding: 10px 14px 0; flex-shrink: 0; }
+.url-input {
+  flex: 1; min-width: 0;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 9px 13px; color: #fff; font-size: 0.84rem;
+  transition: border-color 150ms;
+}
+.url-input:focus { border-color: rgba(255,255,255,0.2); outline: none; }
+.url-input::placeholder { color: rgba(255,255,255,0.26); }
+.url-go {
+  flex-shrink: 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8); border-radius: 10px; padding: 9px 14px;
+  font-size: 0.84rem; font-weight: 600; transition: background 120ms;
+}
+.url-go:hover { background: rgba(255,255,255,0.13); }
+
+.results-area { flex: 1; }
+.section-hd { padding: 16px 14px 10px; font-size: 0.95rem; font-weight: 700; }
+.section-hd small {
+  color: #666; font-size: 0.7rem; font-weight: 400;
+  margin-left: 6px; text-transform: uppercase; letter-spacing: .06em;
+}
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px,1fr));
+  gap: 10px; padding: 0 14px 40px;
+}
+@media(max-width:380px){ .results-grid { grid-template-columns: repeat(2,1fr); } }
+.v-card { border-radius: 8px; overflow: hidden; background: #1c1c1c; cursor: pointer; transition: transform .14s; }
+.v-card:hover { transform: scale(1.03); }
+.v-card:active { transform: scale(.97); }
+.v-thumb-wrap { position: relative; }
+.v-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: #1a1a1a; }
+.v-thumb-ph { width: 100%; aspect-ratio: 16/9; background: #1a1a1a; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.12); font-size: 2rem; }
+.v-dur { position: absolute; bottom: 4px; right: 5px; background: rgba(0,0,0,.78); color: #fff; font-size: .64rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
+.v-info { padding: 7px 9px 10px; }
+.v-title { font-size: .8rem; font-weight: 600; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 3px; }
+.v-meta { font-size: .7rem; color: #777; }
+
+.state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 50px 20px; gap: 12px; text-align: center; color: #666; }
+.state i { font-size: 2.8rem; opacity: .22; }
+.state h3 { color: rgba(255,255,255,.7); font-size: 1.2rem; font-weight: 800; }
+.state p { font-size: .85rem; max-width: 260px; line-height: 1.55; }
+.ring { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(255,255,255,.1); border-top-color: #fff; animation: spin .7s linear infinite; }
+
+/* ═══════════════════════════════════════════════
+   PLAYER VIEW
+   Video fills 100% of the fixed container.
+   Controls overlay sits on top, absolutely positioned.
+═══════════════════════════════════════════════ */
+.p-video-wrap {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #000;
+}
+#videoEl {
+  width: 100%; height: 100%;
+  object-fit: contain; display: block; background: #000;
+}
+video::-webkit-media-controls { display: none !important; }
+video::-webkit-media-controls-enclosure { display: none !important; }
+
+/* Buffering spinner */
+#bufSpin {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 4px solid rgba(255,255,255,.15); border-top-color: #fff;
+  animation: spin .75s linear infinite;
+  display: none; pointer-events: none; z-index: 5;
+}
+
+/* ── Controls overlay — fills entire player, flex col, space-between ── */
+.p-ctrl {
+  position: absolute; inset: 0; z-index: 10;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  background: rgba(0,0,0,0.4);
+  opacity: 0; transition: opacity 0.28s ease;
+  pointer-events: none;
+}
+.p-ctrl.show { opacity: 1; pointer-events: auto; }
+
+/* ── Top bar ── */
+.p-top {
+  display: flex; align-items: center;
+  padding: 1.5rem 1.5rem 1rem;
+  gap: 0;
+}
+.top-btn {
+  background: transparent; border: none; color: #fff;
+  font-size: 1.5rem; padding: 0.7rem 1rem;
+  border-radius: 0.5rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.top-btn:hover { background: rgba(255,255,255,0.1); }
+.p-title-txt {
+  flex: 1; min-width: 0;
+  font-size: 1.1rem; font-weight: 700; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: 0 0.5rem;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+@media(max-width:480px){ .p-title-txt { display: none; } }
+.top-right { display: flex; align-items: center; gap: 0; }
+
+/* ── Centre: skip | play | skip ── */
+.p-center {
+  display: flex; align-items: center; justify-content: center; gap: 2rem;
+  flex: 1; /* takes all space between top and bottom */
+}
+.c-btn {
+  background: rgba(255,255,255,0.2); border: none; color: #fff;
+  font-size: 2.2rem; padding: 0.8rem; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+.c-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+.c-btn:active { transform: scale(0.94); }
+#playBtn { font-size: 3.5rem; padding: 1.2rem; }
+
+/* ── Bottom bar ── */
+.p-bottom {
+  width: 100%;
+  padding: 1rem 1.5rem 2rem;
+  display: flex; flex-direction: row;
+  align-items: center; justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Progress bar — full width, own row on mobile portrait */
+.p-prog-wrap {
+  flex-grow: 1; order: 1;
+  height: 8px; background: rgba(255,255,255,0.3);
+  border-radius: 10px; cursor: grab;
+  position: relative;
+}
+.p-prog-fill {
+  height: 100%; width: 0%; background: #e50914;
+  border-radius: 10px; pointer-events: none;
+  transition: width 0.1s linear;
+}
+.p-prog-dot {
+  position: absolute; top: 50%; left: 0%;
+  transform: translate(-50%,-50%);
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 8px rgba(0,0,0,0.6);
+  display: none; pointer-events: none;
+}
+.p-prog-wrap:hover .p-prog-dot,
+.p-prog-wrap.drag .p-prog-dot { display: block; }
+
+.time-lbl {
+  order: 2; color: #fff; font-size: 1rem; white-space: nowrap;
+  cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  transition: background 0.15s; user-select: none;
+}
+.time-lbl:hover { background: rgba(255,255,255,0.1); }
+
+.vol-wrap { order: 4; display: flex; align-items: center; position: relative; }
+#volBtn {
+  background: transparent; border: none; color: #fff; font-size: 1.8rem;
+  padding: 0.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+#volBtn:hover { background: rgba(255,255,255,0.1); transform: scale(1.1); }
+.vol-slider {
+  -webkit-appearance: none; width: 0; height: 4px;
+  background: rgba(255,255,255,0.3); border-radius: 2px; outline: none;
+  opacity: 0; transition: width 0.3s, opacity 0.3s; cursor: pointer; margin-left: 0.5rem;
+}
+.vol-wrap:hover .vol-slider, .vol-slider:focus { width: 70px; opacity: 1; }
+.vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; }
+.vol-slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: none; }
+
+#fsBtn {
+  order: 10; background: transparent; box-shadow: none; border: none;
+  color: #fff; padding: 0.5rem; font-size: 1.8rem; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+#fsBtn:hover { background: rgba(255,255,255,0.1); transform: scale(1.1); }
+
+/* Mobile portrait: progress bar gets its own full-width row */
+@media(max-width:600px) and (orientation:portrait) {
+  .p-bottom { flex-wrap: wrap; padding: 0.5rem 1rem 1.5rem; gap: 0.5rem; }
+  .p-prog-wrap { order: 0; width: 100%; flex-grow: 0; margin: 0 0 2px; }
+  .time-lbl { order: 1; font-size: 0.85rem; }
+  .vol-wrap { order: 2; }
+  #fsBtn { order: 3; margin-left: auto; }
+}
+
+/* ═══════════════════════════════════════════════
+   DOWNLOAD MODAL — Thirai style
+═══════════════════════════════════════════════ */
+.dl-backdrop {
+  position: fixed; inset: 0; z-index: 9100;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+.dl-backdrop.open { opacity: 1; pointer-events: auto; }
+.dl-modal {
+  width: 100%; max-width: 360px;
+  background: rgba(18,18,18,0.97); border: 1px solid #2a2a2a;
+  border-radius: 22px; padding: 26px 20px 20px;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.7);
+  transform: translateY(16px); transition: transform 0.25s;
+  position: relative; max-height: 85vh; overflow-y: auto;
+}
+.dl-backdrop.open .dl-modal { transform: translateY(0); }
+.dl-modal::-webkit-scrollbar { width: 0; }
+
+.dl-close {
+  position: absolute; top: 14px; right: 14px;
+  background: rgba(255,255,255,0.07); border: 1px solid #333;
+  color: rgba(255,255,255,0.6); width: 30px; height: 30px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; transition: background 0.15s; cursor: pointer;
+}
+.dl-close:hover { background: rgba(255,255,255,0.13); color: #fff; }
+
+.dl-icon {
+  width: 54px; height: 54px; border-radius: 50%;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px; font-size: 1.5rem; color: rgba(255,255,255,0.8);
+}
+.dl-modal h2 { margin: 0 0 4px; font-size: 1.1rem; font-weight: 800; text-align: center; }
+.dl-subtitle { text-align: center; color: rgba(255,255,255,0.38); font-size: 0.82rem; margin: 0 0 8px; }
+
+/* Section headers inside modal */
+.dl-section-hd {
+  font-size: 0.68rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.08em; color: rgba(255,255,255,0.3);
+  padding: 12px 0 6px;
+}
+
+.dl-opt {
+  width: 100%; padding: 13px 15px; border-radius: 14px;
+  border: 1px solid #2e2e2e; background: rgba(255,255,255,0.04);
+  color: #fff; font-size: 0.92rem; font-weight: 600;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  margin-bottom: 8px; text-decoration: none;
+  font-family: 'Inter', sans-serif;
+}
+.dl-opt:last-child { margin-bottom: 0; }
+.dl-opt:hover { background: rgba(255,255,255,0.09); border-color: #444; }
+.dl-opt:active { transform: scale(0.98); }
+
+.dl-opt-ico {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(255,255,255,0.07); border: 1px solid #333;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; flex-shrink: 0;
+}
+.dl-opt-text { display: flex; flex-direction: column; gap: 2px; }
+.dl-opt-label { font-size: 0.9rem; font-weight: 700; }
+.dl-opt-desc { font-size: 0.74rem; color: rgba(255,255,255,0.38); font-weight: 400; }
+
+/* ═══════════════════════════════════════════════
+   GLOBAL: loading overlay + toast
+═══════════════════════════════════════════════ */
+#loadOverlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(8px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+#loadOverlay.on { opacity: 1; pointer-events: auto; }
+#loadOverlay p { color: rgba(255,255,255,0.6); font-size: 0.88rem; }
+
+#toast {
+  position: fixed; bottom: 72px; left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(20,20,20,0.92); border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(12px); color: #fff;
+  padding: 9px 18px; border-radius: 40px;
+  font-size: 0.82rem; font-weight: 600; white-space: nowrap;
+  opacity: 0; pointer-events: none; z-index: 9999;
+  transition: opacity 0.22s, transform 0.22s;
+}
+#toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ════════════════ SEARCH VIEW ════════════════ -->
+<div id="viewSearch">
+  <header class="s-header">
+    <div class="logo" onclick="goSearch()">Thirai<em>·</em>YT</div>
+    <div class="s-row">
+      <input class="s-input" id="qInput" type="text" placeholder="Search YouTube…"
+             autocomplete="off" spellcheck="false" enterkeyhint="search"/>
+      <button class="s-btn" onclick="doSearch()"><i class="bi bi-search"></i></button>
+    </div>
+  </header>
+
+  <div class="url-box">
+    <input class="url-input" id="uInput" type="text" placeholder="Paste YouTube URL or video ID…"
+           autocomplete="off" spellcheck="false" enterkeyhint="go"/>
+    <button class="url-go" onclick="openFromUrl()"><i class="bi bi-play-fill"></i> Open</button>
+  </div>
+
+  <div class="results-area" id="resultsArea">
+    <div class="state">
+      <i class="bi bi-youtube"></i>
+      <h3>Search or paste a link</h3>
+      <p>Search YouTube or paste a URL / video ID to watch instantly via yt-dlp.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════ PLAYER VIEW ════════════════ -->
+<div id="viewPlayer">
+
+  <div class="p-video-wrap">
+    <video id="videoEl" preload="metadata" playsinline></video>
+    <div id="bufSpin"></div>
+
+    <!-- Controls overlay -->
+    <div class="p-ctrl" id="pCtrl">
+
+      <!-- Top bar: back | title | [quality] [download] [fs] -->
+      <div class="p-top">
+        <button class="top-btn" onclick="goSearch()">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <div class="p-title-txt" id="pTitle"></div>
+        <div class="top-right">
+          <!-- Quality select inline -->
+          <select id="qualSel" onchange="switchQual()" style="
+            background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);
+            color:#fff;border-radius:8px;padding:6px 10px;font-size:0.78rem;
+            appearance:none;-webkit-appearance:none;cursor:pointer;margin-right:4px;
+            font-family:'Inter',sans-serif;"></select>
+          <button class="top-btn" onclick="openDl()" title="Download">
+            <i class="bi bi-download"></i>
+          </button>
+          <button class="top-btn" id="fsBtn" onclick="toggleFs()">
+            <i class="bi bi-fullscreen" id="fsIco"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Centre: skip-back | play/pause | skip-fwd -->
+      <div class="p-center">
+        <button class="c-btn" onclick="skip(-10)"><i class="bi bi-skip-backward-fill"></i></button>
+        <button class="c-btn" id="playBtn" onclick="togglePlay()">
+          <i class="bi bi-play-fill" id="ppIco"></i>
+        </button>
+        <button class="c-btn" onclick="skip(10)"><i class="bi bi-skip-forward-fill"></i></button>
+      </div>
+
+      <!-- Bottom bar: progress | time | volume | fullscreen -->
+      <div class="p-bottom">
+        <div class="p-prog-wrap" id="progWrap">
+          <div class="p-prog-fill" id="progFill"></div>
+          <div class="p-prog-dot"  id="progDot"></div>
+        </div>
+        <span class="time-lbl" id="timeLbl" onclick="flipTime()">0:00 / 0:00</span>
+        <div class="vol-wrap">
+          <button id="volBtn" onclick="toggleMute()"><i class="bi bi-volume-up-fill" id="volIco"></i></button>
+          <input class="vol-slider" id="volSlider" type="range" min="0" max="1" step="0.05" value="1"/>
+        </div>
+      </div>
+
+    </div><!-- /p-ctrl -->
+  </div><!-- /p-video-wrap -->
+
+</div><!-- /viewPlayer -->
+
+
+<!-- Download modal -->
+<div class="dl-backdrop" id="dlBackdrop" onclick="if(event.target===this)closeDl()">
+  <div class="dl-modal" id="dlModal">
+    <button class="dl-close" onclick="closeDl()"><i class="bi bi-x"></i></button>
+    <div class="dl-icon"><i class="bi bi-download"></i></div>
+    <h2>Download</h2>
+    <p class="dl-subtitle" id="dlSubtitle">Choose a format</p>
+    <div id="dlList"></div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="loadOverlay">
+  <div class="ring"></div>
+  <p id="loadTxt">Loading…</p>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+
+<script>
+/* ─────────── GLOBALS ─────────── */
+const API = '';
+let info = null, dragging = false, showTimer = null, remaining = false;
+
+const vid      = document.getElementById('videoEl');
+const pCtrl    = document.getElementById('pCtrl');
+const progWrap = document.getElementById('progWrap');
+const progFill = document.getElementById('progFill');
+const progDot  = document.getElementById('progDot');
+const timeLbl  = document.getElementById('timeLbl');
+const ppIco    = document.getElementById('ppIco');
+const volIco   = document.getElementById('volIco');
+const volSlider= document.getElementById('volSlider');
+const bufSpin  = document.getElementById('bufSpin');
+
+/* ─────────── UTILS ─────────── */
+function fmtT(s) {
+  if (!s || isNaN(s)) return '0:00';
+  s = Math.floor(s);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return h ? `${h}:${p2(m)}:${p2(sec)}` : `${m}:${p2(sec)}`;
+}
+function p2(n) { return String(n).padStart(2,'0'); }
+function fmtV(n) {
+  if (!n) return '';
+  if (n>=1e9) return (n/1e9).toFixed(1)+'B views';
+  if (n>=1e6) return (n/1e6).toFixed(1)+'M views';
+  if (n>=1e3) return Math.round(n/1e3)+'K views';
+  return n+' views';
+}
+let toastTmr;
+function toast(msg, ms=2600) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTmr);
+  toastTmr = setTimeout(() => t.classList.remove('on'), ms);
+}
+function showLoad(msg) {
+  document.getElementById('loadTxt').textContent = msg||'Loading…';
+  document.getElementById('loadOverlay').classList.add('on');
+}
+function hideLoad() { document.getElementById('loadOverlay').classList.remove('on'); }
+
+/* ─────────── VIEWS ─────────── */
+function goSearch() {
+  vid.pause(); vid.src = '';
+  document.getElementById('viewSearch').style.display = 'flex';
+  document.getElementById('viewPlayer').style.display = 'none';
+}
+function goPlayer() {
+  document.getElementById('viewSearch').style.display = 'none';
+  document.getElementById('viewPlayer').style.display = 'block';
+}
+
+/* ─────────── SEARCH ─────────── */
+document.getElementById('qInput').addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
+document.getElementById('uInput').addEventListener('keydown', e => { if(e.key==='Enter') openFromUrl(); });
+
+async function doSearch() {
+  const q = document.getElementById('qInput').value.trim();
+  if (!q) return;
+  const area = document.getElementById('resultsArea');
+  area.innerHTML = '<div class="state"><div class="ring"></div><p>Searching…</p></div>';
+  showLoad('Searching…');
+  try {
+    const r = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`);
+    const d = await r.json();
+    hideLoad();
+    if (d.error) { area.innerHTML = `<div class="state"><i class="bi bi-exclamation-circle"></i><p>${d.error}</p></div>`; return; }
+    renderResults(d.results);
+  } catch {
+    hideLoad();
+    area.innerHTML = '<div class="state"><i class="bi bi-wifi-off"></i><p>Cannot reach server. Is server.py running?</p></div>';
+  }
+}
+
+function renderResults(results) {
+  const area = document.getElementById('resultsArea');
+  if (!results.length) { area.innerHTML = '<div class="state"><i class="bi bi-search"></i><p>No results.</p></div>'; return; }
+  area.innerHTML = `<div class="section-hd">Results <small>${results.length} videos</small></div><div class="results-grid" id="grid"></div>`;
+  const grid = document.getElementById('grid');
+  results.forEach(v => {
+    const c = document.createElement('div');
+    c.className = 'v-card';
+    c.onclick = () => openVideo(v.id);
+    const dur = v.duration ? `<span class="v-dur">${fmtT(v.duration)}</span>` : '';
+    c.innerHTML = `
+      <div class="v-thumb-wrap">
+        <img class="v-thumb" src="${v.thumbnail||''}" loading="lazy"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+        <div class="v-thumb-ph" style="display:none"><i class="bi bi-play-circle"></i></div>
+        ${dur}
+      </div>
+      <div class="v-info">
+        <div class="v-title">${v.title||''}</div>
+        <div class="v-meta">${v.uploader||''}${v.view_count?' · '+fmtV(v.view_count):''}</div>
+      </div>`;
+    grid.appendChild(c);
+  });
+}
+
+function openFromUrl() {
+  const s = document.getElementById('uInput').value.trim();
+  if (!s) return;
+  const m = s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/) || s.match(/^([A-Za-z0-9_-]{11})$/);
+  openVideo(m ? m[1] : s);
+}
+
+/* ─────────── OPEN VIDEO ─────────── */
+async function openVideo(id) {
+  showLoad('Fetching video info…');
+  try {
+    const r = await fetch(`${API}/api/info?url=${encodeURIComponent(id)}`);
+    const d = await r.json();
+    hideLoad();
+    if (d.error) { toast('Error: ' + d.error, 4000); return; }
+    info = d;
+    setupPlayer(d);
+    goPlayer();
+    showCtrl();
+  } catch {
+    hideLoad();
+    toast('Server error. Is server.py running?', 4000);
+  }
+}
+
+function setupPlayer(d) {
+  document.getElementById('pTitle').textContent = d.title || '';
+
+  // Quality select
+  const sel = document.getElementById('qualSel');
+  sel.innerHTML = '';
+  (d.formats||[]).forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.format_id;
+    opt.textContent = f.label || (f.height >= 9999 ? 'Best' : f.height+'p');
+    sel.appendChild(opt);
+  });
+
+  // Autoplay first format
+  if (d.formats && d.formats.length) setFmt(d.formats[0], false);
+}
+
+function setFmt(f, autoplay=true) {
+  document.getElementById('qualSel').value = f.format_id;
+  const t = vid.currentTime || 0;
+  vid.src = `${API}/api/stream?url=${encodeURIComponent(info.id)}&fmt=${encodeURIComponent(f.format_id)}`;
+  if (t > 1) vid.currentTime = t;
+  if (autoplay) vid.play().catch(()=>{});
+}
+
+function switchQual() {
+  const sel = document.getElementById('qualSel');
+  const f = (info?.formats||[]).find(x => x.format_id === sel.value);
+  if (f) setFmt(f, !vid.paused);
+}
+
+/* ─────────── CONTROLS VISIBILITY ─────────── */
+function showCtrl() {
+  pCtrl.classList.add('show');
+  clearTimeout(showTimer);
+  showTimer = setTimeout(() => { if (!dragging) pCtrl.classList.remove('show'); }, 3500);
+}
+function hideCtrl() { pCtrl.classList.remove('show'); clearTimeout(showTimer); }
+
+document.getElementById('viewPlayer').addEventListener('click', e => {
+  if (e.target.closest('button,select,.p-prog-wrap')) return;
+  pCtrl.classList.contains('show') ? hideCtrl() : showCtrl();
+});
+document.getElementById('viewPlayer').addEventListener('mousemove', showCtrl);
+document.getElementById('viewPlayer').addEventListener('touchstart', showCtrl, {passive:true});
+
+/* ─────────── PLAYBACK ─────────── */
+function togglePlay() { vid.paused ? vid.play().catch(()=>{}) : vid.pause(); showCtrl(); }
+function skip(s) { vid.currentTime = Math.max(0, Math.min(vid.duration||0, vid.currentTime+s)); showCtrl(); }
+
+vid.addEventListener('play',    () => ppIco.className = 'bi bi-pause-fill');
+vid.addEventListener('pause',   () => ppIco.className = 'bi bi-play-fill');
+vid.addEventListener('ended',   () => { ppIco.className = 'bi bi-play-fill'; showCtrl(); });
+vid.addEventListener('waiting', () => bufSpin.style.display = 'block');
+vid.addEventListener('canplay', () => bufSpin.style.display = 'none');
+vid.addEventListener('playing', () => bufSpin.style.display = 'none');
+
+/* ─────────── PROGRESS ─────────── */
+vid.addEventListener('timeupdate',     updateProg);
+vid.addEventListener('durationchange', updateProg);
+
+function updateProg() {
+  const pct = vid.duration ? (vid.currentTime / vid.duration) * 100 : 0;
+  progFill.style.width = pct + '%';
+  progDot.style.left   = pct + '%';
+  const cur = fmtT(vid.currentTime), dur = fmtT(vid.duration);
+  timeLbl.textContent = remaining && vid.duration
+    ? `-${fmtT(vid.duration - vid.currentTime)} / ${dur}`
+    : `${cur} / ${dur}`;
+}
+function flipTime() { remaining = !remaining; updateProg(); }
+
+function scrub(clientX) {
+  const r = progWrap.getBoundingClientRect();
+  const p = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+  if (vid.duration) vid.currentTime = p * vid.duration;
+}
+progWrap.addEventListener('mousedown', e => {
+  dragging = true; progWrap.classList.add('drag'); scrub(e.clientX); showCtrl();
+});
+document.addEventListener('mousemove', e => { if (dragging) { scrub(e.clientX); showCtrl(); } });
+document.addEventListener('mouseup',   () => { dragging = false; progWrap.classList.remove('drag'); });
+progWrap.addEventListener('touchstart', e => {
+  dragging = true; progWrap.classList.add('drag'); scrub(e.touches[0].clientX); showCtrl();
+}, {passive:true});
+document.addEventListener('touchmove', e => {
+  if (dragging) { scrub(e.touches[0].clientX); showCtrl(); }
+}, {passive:true});
+document.addEventListener('touchend', () => { dragging = false; progWrap.classList.remove('drag'); });
+
+/* ─────────── VOLUME ─────────── */
+volSlider.addEventListener('input', () => {
+  vid.volume = +volSlider.value; vid.muted = vid.volume === 0; updVol();
+});
+function toggleMute() {
+  vid.muted = !vid.muted;
+  if (!vid.muted && vid.volume === 0) vid.volume = 0.5;
+  volSlider.value = vid.muted ? 0 : vid.volume; updVol();
+}
+function updVol() {
+  volIco.className = (vid.muted||vid.volume===0) ? 'bi bi-volume-mute-fill' : 'bi bi-volume-up-fill';
+}
+
+/* ─────────── FULLSCREEN ─────────── */
+function toggleFs() {
+  const el = document.getElementById('viewPlayer');
+  if (!document.fullscreenElement)
+    (el.requestFullscreen||el.webkitRequestFullscreen).call(el);
+  else
+    (document.exitFullscreen||document.webkitExitFullscreen).call(document);
+}
+document.addEventListener('fullscreenchange',       updFs);
+document.addEventListener('webkitfullscreenchange', updFs);
+function updFs() {
+  document.getElementById('fsIco').className =
+    document.fullscreenElement ? 'bi bi-fullscreen-exit' : 'bi bi-fullscreen';
+}
+
+/* ─────────── KEYBOARD ─────────── */
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,select,textarea')) return;
+  if (e.key===' '||e.key==='k'){ e.preventDefault(); togglePlay(); }
+  if (e.key==='ArrowLeft' ||e.key==='j') skip(-10);
+  if (e.key==='ArrowRight'||e.key==='l') skip(10);
+  if (e.key==='f') toggleFs();
+  if (e.key==='m') toggleMute();
+  if (e.key==='Escape'&&!document.fullscreenElement) goSearch();
+});
+
+/* ─────────── DOWNLOAD MODAL ─────────── */
+function openDl() {
+  if (!info) return;
+  const list = document.getElementById('dlList');
+  list.innerHTML = '';
+
+  const videoId  = info.id;
+  const title    = (info.title||'video').replace(/[/\\?%*:|"<>]/g,'_');
+  const fmts     = (info.formats||[]).filter(f => f.height && f.height < 9999);
+
+  // ── Section: Video + Audio (combined MP4 streams) ──
+  if (fmts.length) {
+    const sh = document.createElement('div');
+    sh.className = 'dl-section-hd';
+    sh.textContent = 'Video + Audio';
+    list.appendChild(sh);
+
+    fmts.forEach(f => {
+      const lbl = f.label || `${f.height}p`;
+      const a = document.createElement('a');
+      a.className = 'dl-opt';
+      a.href     = `${API}/api/stream?url=${encodeURIComponent(videoId)}&fmt=${encodeURIComponent(f.format_id)}`;
+      a.download = `${title}_${lbl}.mp4`;
+      a.innerHTML = `
+        <span class="dl-opt-ico"><i class="bi bi-film"></i></span>
+        <span class="dl-opt-text">
+          <span class="dl-opt-label">${lbl} MP4</span>
+          ${f.tbr ? `<span class="dl-opt-desc">${Math.round(f.tbr)} kbps · video+audio</span>` : '<span class="dl-opt-desc">video + audio</span>'}
+        </span>`;
+      list.appendChild(a);
+    });
+  }
+
+  // ── Section: Best Quality (merged via ffmpeg on server) ──
+  const sh2 = document.createElement('div');
+  sh2.className = 'dl-section-hd';
+  sh2.textContent = 'Best Quality (requires ffmpeg on server)';
+  list.appendChild(sh2);
+
+  const bestFmt = encodeURIComponent('bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best');
+  const aBest = document.createElement('a');
+  aBest.className = 'dl-opt';
+  aBest.href     = `${API}/api/stream?url=${encodeURIComponent(videoId)}&fmt=${bestFmt}`;
+  aBest.download = `${title}_best.mp4`;
+  aBest.innerHTML = `
+    <span class="dl-opt-ico"><i class="bi bi-stars"></i></span>
+    <span class="dl-opt-text">
+      <span class="dl-opt-label">Best Quality MP4</span>
+      <span class="dl-opt-desc">Highest res + best audio, merged</span>
+    </span>`;
+  list.appendChild(aBest);
+
+  // ── Section: Audio Only ──
+  const sh3 = document.createElement('div');
+  sh3.className = 'dl-section-hd';
+  sh3.textContent = 'Audio Only';
+  list.appendChild(sh3);
+
+  [
+    { fmt: 'bestaudio[ext=m4a]/bestaudio', label: 'Best Audio (M4A)', desc: 'Highest quality audio', icon: 'bi-music-note-beamed', ext: 'm4a' },
+    { fmt: 'bestaudio[ext=webm]/bestaudio', label: 'Best Audio (WebM)', desc: 'WebM/Opus format', icon: 'bi-music-note', ext: 'webm' },
+  ].forEach(opt => {
+    const a = document.createElement('a');
+    a.className = 'dl-opt';
+    a.href     = `${API}/api/stream?url=${encodeURIComponent(videoId)}&fmt=${encodeURIComponent(opt.fmt)}`;
+    a.download = `${title}_audio.${opt.ext}`;
+    a.innerHTML = `
+      <span class="dl-opt-ico"><i class="bi ${opt.icon}"></i></span>
+      <span class="dl-opt-text">
+        <span class="dl-opt-label">${opt.label}</span>
+        <span class="dl-opt-desc">${opt.desc}</span>
+      </span>`;
+    list.appendChild(a);
+  });
+
+  // ── Section: Utilities ──
+  const sh4 = document.createElement('div');
+  sh4.className = 'dl-section-hd';
+  sh4.textContent = 'Utilities';
+  list.appendChild(sh4);
+
+  // Copy YouTube link
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'dl-opt';
+  copyBtn.innerHTML = `
+    <span class="dl-opt-ico"><i class="bi bi-link-45deg"></i></span>
+    <span class="dl-opt-text">
+      <span class="dl-opt-label">Copy YouTube link</span>
+      <span class="dl-opt-desc">youtube.com/watch?v=${videoId}</span>
+    </span>`;
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(`https://www.youtube.com/watch?v=${videoId}`)
+      .then(() => toast('Link copied!'));
+    closeDl();
+  };
+  list.appendChild(copyBtn);
+
+  // Copy stream URL (best combined)
+  const copyStreamBtn = document.createElement('button');
+  copyStreamBtn.className = 'dl-opt';
+  copyStreamBtn.innerHTML = `
+    <span class="dl-opt-ico"><i class="bi bi-clipboard"></i></span>
+    <span class="dl-opt-text">
+      <span class="dl-opt-label">Copy stream URL</span>
+      <span class="dl-opt-desc">Direct link for VLC / media players</span>
+    </span>`;
+  copyStreamBtn.onclick = () => {
+    const streamUrl = `${location.origin}${API}/api/stream?url=${encodeURIComponent(videoId)}&fmt=best[ext%3Dmp4]/best`;
+    navigator.clipboard.writeText(streamUrl).then(() => toast('Stream URL copied!'));
+    closeDl();
+  };
+  list.appendChild(copyStreamBtn);
+
+  document.getElementById('dlSubtitle').textContent = info.title
+    ? (info.title.length > 50 ? info.title.slice(0,48)+'…' : info.title)
+    : 'Choose a format';
+
+  const bd = document.getElementById('dlBackdrop');
+  bd.classList.add('open');
+}
+
+function closeDl() {
+  document.getElementById('dlBackdrop').classList.remove('open');
+}
+
+/* ─────────── AUTO-OPEN from ?v= param ─────────── */
+(function() {
+  const p = new URLSearchParams(location.search);
+  const v = p.get('v') || p.get('id') || p.get('url');
+  if (v) openVideo(v);
+})();
+</script>
+</body>
+</html>
